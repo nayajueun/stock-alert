@@ -7,11 +7,12 @@ Appropriate for users in CET time zone.
 - Runs three times during the opening hour of the stock market and sends an alert by SMS, if the change in the stock price for two hours was greater than 4%.
 - Additionally runs every morning in the weekdays and sends an alert by SMS, if the change in the stock price for two hours was greater than 4%.
 - Each alert message contains three popular headlines of real-time news data. Formatted as below.
+
 ![alt text](https://github.com/nayajueun/stock-alert/blob/master/demo.jpg?raw=true)
 
 ## Dependencies
-- Stock API provider: "https://www.alphavantage.co/query"
-- News API provider: "https://newsapi.org/v2/everything"
+- Stock API provider: "https://www.alphavantage.co/"
+- News API provider: "https://newsapi.org/"
 
 ## Install
 Packages to install:
