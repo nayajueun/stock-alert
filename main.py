@@ -35,7 +35,7 @@ while not found:
     interested_index = []
     which_index = None
     for name in list(companies_data["Name"]):
-        if name[:input_length] == name_input:
+        if name[:input_length].upper() == name_input.upper():
             interested_index.append(row)
         row += 1
 
