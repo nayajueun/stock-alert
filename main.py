@@ -26,7 +26,7 @@ found = False
 while not found:
     name_input = input("Which company's stock price would you like to receive alerts on?\n"
                        "(Please type the full name of the company. e.g. 'International Business Machines' instead of "
-                       "IBM) ").capitalize()
+                       "IBM) ").title()
     input_length = len(name_input)
     symbol_list = list(companies_data["Symbol"])
     name_list = list(companies_data["Name"])
@@ -56,7 +56,7 @@ while not found:
 
         COMPANY = name_list[which_index]
         answer = input(f"Would you like to receive an alert for {COMPANY}? "
-                       f"Please type Yes or No.").capitalize()
+                       f"Please type Yes or No.").title()
 
         if answer == "Yes":
             found = True
@@ -64,10 +64,17 @@ while not found:
 
 phone_number = input("Please insert your phone number including country code. (in the format of +123456789012) ")
 
+
 # -----------NEWS MESSAGE GENERATOR----------------#
 
-def generate_news():
-    """Returns a string of live news."""
+def send_news(past_price, present_price, interval):
+    """Takes price in past, price in present and either "a day" or "two hours" and returns a string of live news."""
+    percentage_change = present_price / past_price - 1
+    if percentage_change > 0:
+        news = f"{STOCK} 🔺{int(abs(percentage_change) * 100)}%"
+    else:
+        news = f"{STOCK} 🔻{int(abs(percentage_change) * 100)}%"
+    news += f" overall in {interval}"
 
     news_parameters = {
         "q": name_input,
@@ -75,7 +82,7 @@ def generate_news():
         "sortBy": "popularity",
         "apiKey": news_api_key
     }
-    news = ""
+
     response = requests.get(NEWS_ENDPOINT, params=news_parameters)
     response.raise_for_status()
     news_data = response.json()
@@ -84,8 +91,16 @@ def generate_news():
             news_dict = news_data["articles"][n]
             news += f"\nHeadline: {news_dict['title']}\nBrief: {news_dict['description']}\n{news_dict['url']}\n"
     except KeyError:
-        news = "No relevant news found"
-    finally: return news
+        news += "No relevant news found"
+    finally:
+        print(news)
+        message = client.messages \
+            .create(
+            body=news,
+            from_='+14752502580',
+            to=phone_number
+        )
+        print(message.status)
 
 
 # ----------MORNING ALERT-------------#
@@ -106,30 +121,7 @@ def send_message_morning():
     dbytd_closing_price = float(data_list[1]["4. close"])
 
     if abs(ytd_closing_price - dbytd_closing_price) > dbytd_closing_price * 0.04:
-        percentage_change = ytd_closing_price / dbytd_closing_price - 1
-        if percentage_change > 0:
-            text = f"{STOCK} 🔺{int(abs(percentage_change) * 100)}%"
-        else:
-            text = f"{STOCK} 🔻{int(abs(percentage_change) * 100)}%"
-        text += " overall in a day" + generate_news()
-
-        print(text)
-
-        message = client.messages \
-            .create(
-            body=text,
-            from_='+14752502580',
-            to=phone_number
-        )
-        print(message.status)
-
-
-schedule.every().monday.at("9:30").do(send_message_morning())  # in CET
-schedule.every().tuesday.at("9:30").do(send_message_morning())
-schedule.every().wednesday.at("9:30").do(send_message_morning())
-schedule.every().thursday.at("9:30").do(send_message_morning())
-schedule.every().friday.at("9:30").do(send_message_morning())
-
+        send_news(dbytd_closing_price, ytd_closing_price, "a day")
 
 # ---------------DAYTIME ALERT---------------------#
 
@@ -149,39 +141,30 @@ def send_message_alert():
     prev_price = float(data_list_[2]["1. open"])
 
     if abs(cur_price - prev_price) > prev_price * 0.04:
-        percentage_change_ = cur_price / prev_price - 1
-        if percentage_change_ > 0:
-            text_ = f"{STOCK} 🔺{int(abs(percentage_change_) * 100)}%"
-        else:
-            text_ = f"{STOCK} 🔻{int(abs(percentage_change_) * 100)}%"
-        text_ += " overall in two hours" + generate_news()
-
-        print(text_)
-
-        message = client.messages \
-            .create(
-            body=text_,
-            from_='+14752502580',
-            to=phone_number
-        )
-        print(message.status)
+        send_news(prev_price, cur_price, "two hours")
 
 
-schedule.every().monday.at("17:30").do(send_message_alert())  # in CET
-schedule.every().monday.at("19:30").do(send_message_alert())
-schedule.every().monday.at("21:30").do(send_message_alert())
-schedule.every().tuesday.at("17:30").do(send_message_alert())
-schedule.every().tuesday.at("19:30").do(send_message_alert())
-schedule.every().tuesday.at("21:30").do(send_message_alert())
-schedule.every().wednesday.at("17:30").do(send_message_alert())
-schedule.every().wednesday.at("19:30").do(send_message_alert())
-schedule.every().wednesday.at("21:30").do(send_message_alert())
-schedule.every().thursday.at("17:30").do(send_message_alert())
-schedule.every().thursday.at("19:30").do(send_message_alert())
-schedule.every().thursday.at("21:30").do(send_message_alert())
-schedule.every().friday.at("17:30").do(send_message_alert())
-schedule.every().friday.at("19:30").do(send_message_alert())
-schedule.every().friday.at("21:30").do(send_message_alert())
+schedule.every().monday.at("09:30").do(send_message_morning)  # in CET
+schedule.every().tuesday.at("09:30").do(send_message_morning)
+schedule.every().wednesday.at("09:30").do(send_message_morning)
+schedule.every().thursday.at("09:30").do(send_message_morning)
+schedule.every().friday.at("09:30").do(send_message_morning)
+
+schedule.every().monday.at("17:30").do(send_message_alert)  # in CET
+schedule.every().monday.at("19:30").do(send_message_alert)
+schedule.every().monday.at("21:30").do(send_message_alert)
+schedule.every().tuesday.at("17:30").do(send_message_alert)
+schedule.every().tuesday.at("19:30").do(send_message_alert)
+schedule.every().tuesday.at("21:30").do(send_message_alert)
+schedule.every().wednesday.at("17:30").do(send_message_alert)
+schedule.every().wednesday.at("19:30").do(send_message_alert)
+schedule.every().wednesday.at("21:30").do(send_message_alert)
+schedule.every().thursday.at("17:30").do(send_message_alert)
+schedule.every().thursday.at("19:30").do(send_message_alert)
+schedule.every().thursday.at("21:30").do(send_message_alert)
+schedule.every().friday.at("17:30").do(send_message_alert)
+schedule.every().friday.at("19:30").do(send_message_alert)
+schedule.every().friday.at("21:30").do(send_message_alert)
 
 while True:
     schedule.run_pending()
