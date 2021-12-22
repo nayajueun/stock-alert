@@ -5,7 +5,6 @@ import time
 from twilio.rest import Client
 from datetime import date
 
-found = False
 companies_data = pandas.read_csv("nasdaq_screener_1639426793803.csv")
 COMPANY = None
 STOCK = None
@@ -23,6 +22,7 @@ NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
 
 # --------------SEARCH FOR THE COMPANY-----------------#
 
+found = False
 while not found:
     name_input = input("Which company's stock price would you like to receive alerts on?\n"
                        "(Please type the full name of the company. e.g. 'International Business Machines' instead of "
