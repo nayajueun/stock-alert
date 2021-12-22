@@ -1,3 +1,4 @@
+
 .idea/
 
 # Created by https://www.gitignore.io/api/macos,linux,django,python,pycharm
@@ -210,5 +211,7 @@ ENV/
 
 # mkdocs documentation
 /site
+
+*.txt
 
 # End of https://www.gitignore.io/api/macos,linux,django,python,pycharm

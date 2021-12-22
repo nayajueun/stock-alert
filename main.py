@@ -11,10 +11,10 @@ COMPANY = None
 STOCK = None
 name_input = None
 
-stock_api_key = "STOCK_API_KEY"
-news_api_key = "NEWS_API_KEY"
-account_sid = "ACCOUNT_SID"
-auth_token = "AUTH_TOKEN"
+stock_api_key = open("stock_api_key.txt", "r").read()
+news_api_key = open("news_api_key.txt", "r").read()
+account_sid = open("account_sid.txt", "r").read()
+auth_token = open("auth_token.txt", "r").read()
 client = Client(account_sid, auth_token)
 today = date.today()
 
@@ -26,7 +26,7 @@ NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
 while not found:
     name_input = input("Which company's stock price would you like to receive alerts on?\n"
                        "(Please type the full name of the company. e.g. 'International Business Machines' instead of "
-                       "IBM)").capitalize()
+                       "IBM) ").capitalize()
     input_length = len(name_input)
     symbol_list = list(companies_data["Symbol"])
     name_list = list(companies_data["Name"])
@@ -62,10 +62,36 @@ while not found:
             found = True
             STOCK = symbol_list[which_index]
 
+phone_number = input("Please insert your phone number including country code. (in the format of +123456789012) ")
+
+# -----------NEWS MESSAGE GENERATOR----------------#
+
+def generate_news():
+    """Returns a string of live news."""
+
+    news_parameters = {
+        "q": name_input,
+        "from": today,
+        "sortBy": "popularity",
+        "apiKey": news_api_key
+    }
+    news = ""
+    response = requests.get(NEWS_ENDPOINT, params=news_parameters)
+    response.raise_for_status()
+    news_data = response.json()
+    try:
+        for n in range(3):
+            news_dict = news_data["articles"][n]
+            news += f"\nHeadline: {news_dict['title']}\nBrief: {news_dict['description']}\n{news_dict['url']}\n"
+    except KeyError:
+        news = "No relevant news found"
+    finally: return news
+
 
 # ----------MORNING ALERT-------------#
 
 def send_message_morning():
+    """Send SMS to user."""
     stock_parameters = {
         "function": "TIME_SERIES_DAILY",
         "symbol": STOCK,
@@ -76,7 +102,6 @@ def send_message_morning():
     r = requests.get(STOCK_ENDPOINT, stock_parameters)
     stock_data = r.json()["Time Series (Daily)"]
     data_list = [value for (key, value) in stock_data.items()]
-    print(data_list)
     ytd_closing_price = float(data_list[0]["4. close"])
     dbytd_closing_price = float(data_list[1]["4. close"])
 
@@ -86,21 +111,7 @@ def send_message_morning():
             text = f"{STOCK} 🔺{int(abs(percentage_change) * 100)}%"
         else:
             text = f"{STOCK} 🔻{int(abs(percentage_change) * 100)}%"
-        text += " overall in a day"
-
-        news_parameters = {
-            "q": name_input,
-            "from": today,
-            "sortBy": "popularity",
-            "apiKey": news_api_key
-        }
-
-        response = requests.get(NEWS_ENDPOINT, params=news_parameters)
-        response.raise_for_status()
-        news_data = response.json()
-        for n in range(3):
-            news_dict = news_data["articles"][n]
-            text += f"\nHeadline: {news_dict['title']}\nBrief: {news_dict['description']}\n{news_dict['url']}\n"
+        text += " overall in a day" + generate_news()
 
         print(text)
 
@@ -108,7 +119,7 @@ def send_message_morning():
             .create(
             body=text,
             from_='+14752502580',
-            to='+32471033366'
+            to=phone_number
         )
         print(message.status)
 
@@ -119,9 +130,11 @@ schedule.every().wednesday.at("9:30").do(send_message_morning())
 schedule.every().thursday.at("9:30").do(send_message_morning())
 schedule.every().friday.at("9:30").do(send_message_morning())
 
+
 # ---------------DAYTIME ALERT---------------------#
 
 def send_message_alert():
+    """Send SMS to user."""
     stock_parameters_ = {
         "function": "TIME_SERIES_INTRADAY",
         "symbol": STOCK,
@@ -141,28 +154,15 @@ def send_message_alert():
             text_ = f"{STOCK} 🔺{int(abs(percentage_change_) * 100)}%"
         else:
             text_ = f"{STOCK} 🔻{int(abs(percentage_change_) * 100)}%"
-        text_ += " overall in two hours"
+        text_ += " overall in two hours" + generate_news()
 
-        news_parameters_ = {
-            "q": name_input,
-            "from": today,
-            "sortBy": "popularity",
-            "apiKey": news_api_key
-        }
-
-        response_ = requests.get(NEWS_ENDPOINT, params=news_parameters_)
-        response_.raise_for_status()
-        news_data_ = response_.json()
-        print(news_data_)
-        for i in range(3):
-            news_dict_ = news_data_["articles"][i]
-            text_ += f"\nHeadline: {news_dict_['title']}\nBrief: {news_dict_['description']}\n{news_dict_['url']}\n"
+        print(text_)
 
         message = client.messages \
             .create(
             body=text_,
             from_='+14752502580',
-            to='+32471033366'
+            to=phone_number
         )
         print(message.status)
 
